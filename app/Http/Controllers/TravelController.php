@@ -139,7 +139,7 @@ class TravelController extends Controller
             CURLOPT_POSTFIELDS     => $contents,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . env('SUPABASE_SERVICE_KEY'),
+                'Authorization: Bearer ' . env('SUPABASE_SERVICE_ROLE_KEY'),
                 'Content-Type: ' . $mimeType,
                 'x-upsert: true',
             ],
@@ -166,7 +166,7 @@ class TravelController extends Controller
             CURLOPT_CUSTOMREQUEST  => 'DELETE',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => [
-                'Authorization: Bearer ' . env('SUPABASE_SERVICE_KEY'),
+                'Authorization: Bearer ' . env('SUPABASE_SERVICE_ROLE_KEY'),
             ],
         ]);
         curl_exec($ch);
