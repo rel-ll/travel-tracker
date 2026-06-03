@@ -4,20 +4,8 @@
 
 @section('content')
 <style>
-    .detail-grid {
-        display: grid !important;
-        grid-template-columns: repeat(3, 1fr) !important;
-        gap: 1rem !important;
-    }
-    @media (max-width: 640px) {
-        .detail-grid { grid-template-columns: repeat(2, 1fr) !important; }
-    }
-    .detail-card {
-        background: var(--content-bg, #f8f9fa);
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 1rem;
-    }
+    .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .detail-card { background: #f8f9fa; border-radius: 8px; padding: 1rem; }
     .detail-label { font-size: .75rem; text-transform: uppercase; color: #6c757d; letter-spacing: .05em; }
     .detail-value { font-size: 1.05rem; font-weight: 600; margin-top: .2rem; }
     .badge-mode { display: inline-block; padding: .3rem .8rem; border-radius: 20px; font-size: .85rem; font-weight: 600; }
@@ -176,7 +164,7 @@
     {{-- ── Inline file preview ─────────────────────────────── --}}
     @if($travel->itinerary_path)
     @php
-        $fileUrl  = $travel->itinerary_path;
+        $fileUrl  = $travel->itinerary_path; // direct Supabase URL
         $ext      = strtolower(pathinfo($travel->itinerary_path, PATHINFO_EXTENSION));
         $isPdf    = $ext === 'pdf';
         $isImage  = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
