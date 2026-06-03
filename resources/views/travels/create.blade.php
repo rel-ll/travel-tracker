@@ -61,7 +61,6 @@ $providers = [
                     <input type="text" id="transport_provider" name="transport_provider"
                            value="{{ old('transport_provider') }}"
                            placeholder="Select above or type a custom provider…"
-                           autocomplete="nope"
                            style="flex:1">
                     <button type="button" id="clear-provider" onclick="clearProvider()"
                             class="btn btn-outline btn-sm" style="white-space:nowrap">✕ Clear</button>
