@@ -176,7 +176,7 @@
     {{-- ── Inline file preview ─────────────────────────────── --}}
     @if($travel->itinerary_path)
     @php
-        $fileUrl  = Storage::url($travel->itinerary_path);
+        $fileUrl  = $travel->itinerary_path;
         $ext      = strtolower(pathinfo($travel->itinerary_path, PATHINFO_EXTENSION));
         $isPdf    = $ext === 'pdf';
         $isImage  = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
