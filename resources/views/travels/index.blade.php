@@ -4,7 +4,7 @@
 @section('content')
 
 {{-- STATS --}}
-<div class="stat-grid" style="display:grid !important; grid-template-columns:repeat(auto-fill, minmax(130px,1fr)) !important; gap:12px !important; margin-bottom:20px !important;">
+<div class="stat-grid" style="display:grid !important; grid-template-columns:repeat(auto-fit, minmax(130px,1fr)) !important; gap:12px !important; margin-bottom:20px !important;">
     <div class="stat-card">
         <div class="stat-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
