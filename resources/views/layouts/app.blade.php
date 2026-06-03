@@ -381,13 +381,13 @@
         /* ── Stat cards ───────────────────────────── */
         .stat-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
             gap: 12px;
             margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
         }
 
         .stat-card {
-            background: var(--card-bg);
+            
             border: 1px solid var(--card-border);
             border-radius: var(--radius);
             padding: 16px 18px;
@@ -395,6 +395,7 @@
             display: flex;          /* add */
             flex-direction: column; /* add */
             gap: 10px; 
+            background: var(--card-bg);
         }
 
         .stat-label {
