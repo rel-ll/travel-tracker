@@ -12,9 +12,8 @@ class TravelController extends Controller
     public function index(Request $request)
     {
         $query = Travel::query();
-
         if ($request->filled('mode'))    $query->where('travel_mode', $request->mode);
-        if ($request->filled('purpose')) $query->where('purpose', 'like', '%' . $request->purpose . '%');
+        if ($request->filled('purpose')) $query->where('purpose', 'like', '%'.$request->purpose.'%');
         if ($request->filled('from'))    $query->whereDate('travel_date', '>=', $request->from);
         if ($request->filled('to'))      $query->whereDate('travel_date', '<=', $request->to);
 
@@ -30,6 +29,19 @@ class TravelController extends Controller
         ];
 
         return view('travels.index', compact('travels', 'stats'));
+    }
+
+    // ── ALL RECORDS (no + New Travel button) ─────────────────────────────────────
+    public function all(Request $request)
+    {
+        $query = Travel::query();
+        if ($request->filled('mode'))    $query->where('travel_mode', $request->mode);
+        if ($request->filled('purpose')) $query->where('purpose', 'like', '%'.$request->purpose.'%');
+        if ($request->filled('from'))    $query->whereDate('travel_date', '>=', $request->from);
+        if ($request->filled('to'))      $query->whereDate('travel_date', '<=', $request->to);
+
+        $travels = $query->latest('travel_date')->paginate(15)->withQueryString();
+        return view('travels.all', compact('travels'));
     }
 
     // ── CREATE FORM ──────────────────────────────────────────────────────────────
@@ -52,7 +64,7 @@ class TravelController extends Controller
             'travel_date'        => 'required|date',
             'return_date'        => 'nullable|date|after_or_equal:travel_date',
             'notes'              => 'nullable|string|max:1000',
-            'itinerary'          => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
+            'itinerary'          => $this->itineraryRules(),
         ]);
 
         $validated['itinerary_path'] = null;
@@ -61,9 +73,7 @@ class TravelController extends Controller
         }
 
         Travel::create($validated);
-
-        return redirect()->route('travels.index')
-            ->with('success', 'Travel record created successfully!');
+        return redirect()->route('travels.index')->with('success', 'Travel record created successfully!');
     }
 
     // ── SHOW ──────────────────────────────────────────────────────────────────────
@@ -92,11 +102,10 @@ class TravelController extends Controller
             'travel_date'        => 'required|date',
             'return_date'        => 'nullable|date|after_or_equal:travel_date',
             'notes'              => 'nullable|string|max:1000',
-            'itinerary'          => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png|max:5120',
+            'itinerary'          => $this->itineraryRules(),
         ]);
 
         if ($request->hasFile('itinerary')) {
-            // Delete old file from Supabase if exists
             if ($travel->itinerary_path) {
                 $this->deleteFromSupabase($travel->itinerary_path);
             }
@@ -104,25 +113,60 @@ class TravelController extends Controller
         }
 
         $travel->update($validated);
-
-        return redirect()->route('travels.show', $travel)
-            ->with('success', 'Travel record updated!');
+        return redirect()->route('travels.show', $travel)->with('success', 'Travel record updated!');
     }
 
-    // ── DELETE ────────────────────────────────────────────────────────────────────
+    // ── SOFT DELETE ───────────────────────────────────────────────────────────────
     public function destroy(Travel $travel)
     {
+        $travel->delete(); // soft delete only — file kept until force deleted
+        return redirect()->route('travels.index')->with('success', 'Travel record moved to trash.');
+    }
+
+    // ── TRASH ─────────────────────────────────────────────────────────────────────
+    public function trash(Request $request)
+    {
+        $query = Travel::onlyTrashed();
+        if ($request->filled('mode'))    $query->where('travel_mode', $request->mode);
+        if ($request->filled('purpose')) $query->where('purpose', 'like', '%'.$request->purpose.'%');
+        if ($request->filled('from'))    $query->whereDate('travel_date', '>=', $request->from);
+        if ($request->filled('to'))      $query->whereDate('travel_date', '<=', $request->to);
+
+        $travels = $query->latest('deleted_at')->paginate(15)->withQueryString();
+        return view('travels.trash', compact('travels'));
+    }
+
+    // ── RESTORE ───────────────────────────────────────────────────────────────────
+    public function restore($id)
+    {
+        Travel::onlyTrashed()->findOrFail($id)->restore();
+        return redirect()->route('travels.trash')->with('success', 'Record restored.');
+    }
+
+    // ── FORCE DELETE ──────────────────────────────────────────────────────────────
+    public function forceDelete($id)
+    {
+        $travel = Travel::onlyTrashed()->findOrFail($id);
         if ($travel->itinerary_path) {
             $this->deleteFromSupabase($travel->itinerary_path);
         }
-        $travel->delete();
-
-        return redirect()->route('travels.index')
-            ->with('success', 'Travel record deleted.');
+        $travel->forceDelete();
+        return redirect()->route('travels.trash')->with('success', 'Record permanently deleted.');
     }
 
-    // ── SUPABASE STORAGE HELPERS ──────────────────────────────────────────────────
+    // ── EMPTY TRASH ───────────────────────────────────────────────────────────────
+    public function emptyTrash()
+    {
+        Travel::onlyTrashed()->get()->each(function ($travel) {
+            if ($travel->itinerary_path) {
+                $this->deleteFromSupabase($travel->itinerary_path);
+            }
+            $travel->forceDelete();
+        });
+        return redirect()->route('travels.trash')->with('success', 'Trash emptied.');
+    }
 
+    // ── SUPABASE HELPERS ──────────────────────────────────────────────────────────
     private function uploadToSupabase($file): string
     {
         $bucket   = env('SUPABASE_STORAGE_BUCKET', 'itineraries');
@@ -130,8 +174,7 @@ class TravelController extends Controller
         $contents = file_get_contents($file->getRealPath());
         $mimeType = $file->getMimeType();
 
-        $url = rtrim(env('SUPABASE_URL'), '/') 
-             . '/storage/v1/object/' . $bucket . '/' . $filename;
+        $url = rtrim(env('SUPABASE_URL'), '/') . '/storage/v1/object/' . $bucket . '/' . $filename;
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -147,19 +190,16 @@ class TravelController extends Controller
         curl_exec($ch);
         curl_close($ch);
 
-        // Return the public URL
-        return rtrim(env('SUPABASE_URL'), '/')
-             . '/storage/v1/object/public/' . $bucket . '/' . $filename;
+        return rtrim(env('SUPABASE_URL'), '/') . '/storage/v1/object/public/' . $bucket . '/' . $filename;
     }
 
     private function deleteFromSupabase(string $publicUrl): void
     {
-        $bucket  = env('SUPABASE_STORAGE_BUCKET', 'itineraries');
-        $baseUrl = rtrim(env('SUPABASE_URL'), '/') . '/storage/v1/object/public/' . $bucket . '/';
+        $bucket   = env('SUPABASE_STORAGE_BUCKET', 'itineraries');
+        $baseUrl  = rtrim(env('SUPABASE_URL'), '/') . '/storage/v1/object/public/' . $bucket . '/';
         $filename = str_replace($baseUrl, '', $publicUrl);
 
-        $url = rtrim(env('SUPABASE_URL'), '/')
-             . '/storage/v1/object/' . $bucket . '/' . $filename;
+        $url = rtrim(env('SUPABASE_URL'), '/') . '/storage/v1/object/' . $bucket . '/' . $filename;
 
         $ch = curl_init($url);
         curl_setopt_array($ch, [
@@ -171,5 +211,27 @@ class TravelController extends Controller
         ]);
         curl_exec($ch);
         curl_close($ch);
+    }
+
+    // ── SHARED VALIDATION ─────────────────────────────────────────────────────────
+    private function itineraryRules(): array
+    {
+        return [
+            'nullable', 'file', 'max:5120',
+            'mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png',
+            function ($attribute, $value, $fail) {
+                $realMime = mime_content_type($value->getRealPath());
+                $allowed  = [
+                    'application/pdf', 'image/jpeg', 'image/png',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                ];
+                if (!in_array($realMime, $allowed)) {
+                    $fail('Invalid file type.');
+                }
+            },
+        ];
     }
 }

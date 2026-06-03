@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Travel extends Model
 {
-    use HasFactory, softDeletes;
+    use HasFactory, SoftDeletes;
 
      protected $table = 'travels';
 
