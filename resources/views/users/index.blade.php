@@ -39,7 +39,7 @@
                             <span class="badge" style="background:#e2e8f0;color:#4a5568">Staff</span>
                         @endif
                     </td>
-                    <td style="color:#718096;font-size:.85rem">{{ $user->created_at->format('M d, Y') }}</td>
+                    <td style="color:#718096;font-size:.85rem">{{ $user->created_at ? $user->created_at->format('M d, Y') : '—' }}</td>
                     <td>
                         <div style="display:flex;gap:.4rem">
                             <a href="{{ route('users.edit', $user) }}" class="btn btn-warning btn-sm">Edit</a>
