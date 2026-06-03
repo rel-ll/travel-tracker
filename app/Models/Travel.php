@@ -2,53 +2,60 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Travel extends Model
 {
-    use HasFactory, SoftDeletes;
-
-    protected $table = 'travels';
+    use HasFactory;
 
     protected $fillable = [
+        'share_token',
+        'share_expires_at',
         'travel_mode',
+        'transport_provider',
         'origin',
         'destination',
         'purpose',
         'amount',
         'passengers',
+        'itinerary_path',
         'travel_date',
         'return_date',
         'notes',
-        'itinerary_path',
     ];
 
     protected $casts = [
-        'travel_date'      => 'date',
-        'return_date'      => 'date',
         'share_expires_at' => 'datetime',
-        'amount'           => 'decimal:2',
+        'travel_date'  => 'date',
+        'return_date'  => 'date',
+        'amount'       => 'decimal:2',
+        'passengers'   => 'integer',
     ];
 
-    /** Human-readable travel mode label */
+    // Human-readable mode label with icon
     public function getModeIconAttribute(): string
     {
-        return match ($this->travel_mode) {
+        return match($this->travel_mode) {
             'air'  => '✈️',
             'sea'  => '🚢',
             'land' => '🚌',
-            default => '🧳',
+            default => '🚗',
         };
     }
 
-    /** Check if the share link is still active */
-    public function getShareActiveAttribute(): bool
+    public function getModeLabelAttribute(): string
     {
-        return $this->share_token
-            && $this->share_expires_at
-            && Carbon::now()->isBefore($this->share_expires_at);
+        return match($this->travel_mode) {
+            'air'  => 'Air',
+            'sea'  => 'Sea',
+            'land' => 'Land',
+            default => ucfirst($this->travel_mode),
+        };
+    }
+
+    public function getFormattedAmountAttribute(): string
+    {
+        return '₱ ' . number_format($this->amount, 2);
     }
 }

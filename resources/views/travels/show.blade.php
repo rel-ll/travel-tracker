@@ -1,238 +1,181 @@
 @extends('layouts.app')
-
-@section('title', 'Travel Record — ' . $travel->origin . ' → ' . $travel->destination)
+@section('title', 'Travel #' . $travel->id)
 
 @section('content')
+
+{{-- PRINT STYLES --}}
 <style>
-    .detail-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    .detail-card { background: #f8f9fa; border-radius: 8px; padding: 1rem; }
-    .detail-label { font-size: .75rem; text-transform: uppercase; color: #6c757d; letter-spacing: .05em; }
-    .detail-value { font-size: 1.05rem; font-weight: 600; margin-top: .2rem; }
-    .badge-mode { display: inline-block; padding: .3rem .8rem; border-radius: 20px; font-size: .85rem; font-weight: 600; }
-    .badge-air  { background: #dbeafe; color: #1d4ed8; }
-    .badge-sea  { background: #d1fae5; color: #065f46; }
-    .badge-land { background: #fef3c7; color: #92400e; }
-    .btn { padding: .5rem 1rem; border-radius: 6px; border: none; cursor: pointer; font-size: .9rem; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; gap: .4rem; }
-    .btn-primary   { background: #2563eb; color: #fff; }
-    .btn-secondary { background: #6b7280; color: #fff; }
-    .btn-success   { background: #059669; color: #fff; }
-    .btn-danger    { background: #dc2626; color: #fff; }
-    .btn-outline   { background: transparent; border: 1px solid #d1d5db; color: #374151; }
-    .btn:hover { opacity: .88; }
-    .share-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem 1.2rem; margin-top: 1rem; }
-    .share-box input { width: 100%; padding: .4rem .7rem; border: 1px solid #d1d5db; border-radius: 5px; font-size: .85rem; background: #fff; }
-    .share-box .expires { font-size: .78rem; color: #6b7280; margin-top: .3rem; }
-    .share-warning { background: #fef9c3; border: 1px solid #fde047; border-radius: 8px; padding: .7rem 1rem; font-size: .85rem; color: #713f12; margin-top: 1rem; }
-    .file-preview { margin-top: 1.5rem; }
-    .file-preview iframe { width: 100%; height: 700px; border: 1px solid #e5e7eb; border-radius: 8px; }
-    .file-preview img { max-width: 100%; border-radius: 8px; background: #1f2937; padding: .5rem; }
-    @media print {
-        .no-print { display: none !important; }
-        .detail-grid { grid-template-columns: repeat(3,1fr); }
-        .print-header { display: block !important; margin-bottom: 1.5rem; }
-    }
+@media print {
+    nav, .page-header, .no-print { display: none !important; }
+    body { background: white !important; font-family: Arial, sans-serif; }
+    .container { padding: 0 !important; max-width: 100% !important; }
+    .card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    .card-body { padding: 1.5rem !important; }
+    .route-display { background: #f0f0f0 !important; border: 1px solid #ddd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge { border: 1px solid #ddd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .detail-label { color: #666 !important; font-size: 9pt !important; }
+    .detail-value { font-size: 11pt !important; }
+    .detail-grid { grid-template-columns: repeat(3, 1fr) !important; gap: .75rem !important; }
+    .print-header { display: block !important; }
+    .itinerary-preview { display: none !important; }
+    a { text-decoration: none !important; color: inherit !important; }
+}
+@media screen {
     .print-header { display: none; }
+}
 </style>
 
-<div class="print-header">
-    <h2>Travel Record: {{ $travel->origin }} → {{ $travel->destination }}</h2>
-    <p style="color:#6b7280;font-size:.85rem">Printed on {{ now()->format('F d, Y h:i A') }}</p>
-    <hr>
+{{-- PRINT HEADER (only visible when printing) --}}
+<div class="print-header" style="margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:2px solid #1a365d;">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+            <h1 style="font-size:16pt;color:#1a365d;margin:0">Travel Record #{{ $travel->id }}</h1>
+            <p style="font-size:9pt;color:#666;margin:.25rem 0 0">Printed: {{ now()->format('F d, Y h:i A') }}</p>
+        </div>
+        <div style="font-size:10pt;color:#666;text-align:right">
+            🗺️ Travel Tracker
+        </div>
+    </div>
 </div>
 
-<div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:.5rem">
-    <a href="{{ route('travels.index') }}" class="btn btn-outline">← Back</a>
-    <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center">
-        @if(auth()->user()->role === 'admin')
-            {{-- Share button --}}
-            <button class="btn btn-success" onclick="document.getElementById('share-section').style.display='block'; this.style.display='none'">
-                🔗 Share
-            </button>
-            <a href="{{ route('travels.edit', $travel) }}" class="btn btn-primary">✏️ Edit</a>
-            <form method="POST" action="{{ route('travels.destroy', $travel) }}" onsubmit="return confirm('Delete this record?')">
+<div class="page-header no-print">
+    <h1>Travel Record #{{ $travel->id }}</h1>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+        @if(auth()->user()->isAdmin())
+            <a href="{{ route('travels.edit', $travel) }}" class="btn btn-warning">Edit</a>
+            <form method="POST" action="{{ route('travels.destroy', $travel) }}"
+                  onsubmit="return confirm('Delete this record permanently?')">
                 @csrf @method('DELETE')
-                <button type="submit" class="btn btn-danger">🗑 Delete</button>
+                <button class="btn btn-danger">Delete</button>
             </form>
         @endif
-        <button class="btn btn-secondary" onclick="window.print()">🖨 Print / Save PDF</button>
+        <button onclick="window.print()" class="btn btn-primary">🖨 Print / Save PDF</button>
+        <a href="{{ route('travels.index') }}" class="btn btn-outline">Back to List</a>
     </div>
 </div>
 
-{{-- ── Share section (admin only) ──────────────────────────────── --}}
-@if(auth()->user()->role === 'admin')
-<div id="share-section" style="display:{{ $travel->share_active ? 'block' : 'none' }}; margin-bottom:1.5rem" class="no-print">
-    @if($travel->share_active)
-        <div class="share-box">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:.6rem">
-                <strong style="color:#065f46">🔗 Active Share Link</strong>
-                <form method="POST" action="{{ route('travel.share.revoke', $travel) }}">
-                    @csrf
-                    <button type="submit" class="btn btn-danger" style="font-size:.8rem; padding:.3rem .7rem">Revoke</button>
-                </form>
-            </div>
-            <input type="text" id="share-url-input" value="{{ route('travel.share.view', $travel->share_token) }}" readonly onclick="this.select()">
-            <div style="display:flex; justify-content:space-between; align-items:center">
-                <span class="expires">⏱ Expires: {{ $travel->share_expires_at->format('M d, Y h:i A') }}</span>
-                <button class="btn btn-outline" style="font-size:.78rem; padding:.2rem .6rem; margin-top:.3rem" onclick="copyShareUrl()">📋 Copy</button>
-            </div>
-        </div>
-    @else
-        <div class="share-warning">
-            <strong>No active share link.</strong>
-            <p style="margin:.3rem 0 .6rem">Generate a link that expires in <strong>24 hours</strong>. Anyone with the link can view this record without logging in.</p>
-            <button class="btn btn-success" onclick="generateShareLink({{ $travel->id }})">🔗 Generate Share Link</button>
-        </div>
-        <div id="new-share-box" style="display:none" class="share-box">
-            <strong style="color:#065f46">✅ Link generated!</strong>
-            <input type="text" id="new-share-url" readonly onclick="this.select()" style="margin-top:.5rem">
-            <div style="display:flex; justify-content:space-between; align-items:center">
-                <span class="expires" id="new-share-expires"></span>
-                <button class="btn btn-outline" style="font-size:.78rem; padding:.2rem .6rem; margin-top:.3rem" onclick="copyNewUrl()">📋 Copy</button>
-            </div>
-        </div>
-    @endif
-</div>
-@endif
+<div class="card">
+    <div class="card-body">
 
-@if(session('success'))
-    <div style="background:#d1fae5; border:1px solid #6ee7b7; padding:.8rem 1rem; border-radius:8px; margin-bottom:1rem; color:#065f46">
-        ✅ {{ session('success') }}
-    </div>
-@endif
-
-{{-- ── Main detail card ────────────────────────────────────────── --}}
-<div style="background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:1.5rem">
-
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.5rem; flex-wrap:wrap; gap:.5rem">
-        <div>
-            <h2 style="margin:0; font-size:1.4rem">
-                {{ $travel->mode_icon }} {{ $travel->origin }} → {{ $travel->destination }}
-            </h2>
-            <div style="color:#6b7280; font-size:.9rem; margin-top:.3rem">{{ $travel->purpose }}</div>
+        {{-- ROUTE BANNER --}}
+        <div class="route-display">
+            <span>{{ $travel->mode_icon }}</span>
+            <span>{{ $travel->origin }}</span>
+            <span class="route-arrow">→</span>
+            <span>{{ $travel->destination }}</span>
+            <span class="badge badge-{{ $travel->travel_mode }}" style="margin-left:auto">
+                {{ $travel->mode_label }}
+            </span>
         </div>
-        <span class="badge-mode badge-{{ $travel->travel_mode }}">
-            {{ ucfirst($travel->travel_mode) }}
-        </span>
-    </div>
 
-    <div class="detail-grid">
-        <div class="detail-card">
-            <div class="detail-label">Travel Date</div>
-            <div class="detail-value">{{ $travel->travel_date->format('M d, Y') }}</div>
-        </div>
-        <div class="detail-card">
-            <div class="detail-label">Return Date</div>
-            <div class="detail-value">{{ $travel->return_date ? $travel->return_date->format('M d, Y') : '—' }}</div>
-        </div>
-        <div class="detail-card">
-            <div class="detail-label">Duration</div>
-            <div class="detail-value">
-                @if($travel->return_date)
-                    {{ $travel->travel_date->diffInDays($travel->return_date) + 1 }} days
-                @else
-                    —
-                @endif
+        <div class="detail-grid">
+            <div class="detail-item">
+                <div class="detail-label">Purpose / Project</div>
+                <div class="detail-value">{{ $travel->purpose }}</div>
             </div>
-        </div>
-        <div class="detail-card">
-            <div class="detail-label">Passengers</div>
-            <div class="detail-value">{{ $travel->passengers }} pax</div>
-        </div>
-        <div class="detail-card">
-            <div class="detail-label">Total Amount</div>
-            <div class="detail-value">₱{{ number_format($travel->amount, 2) }}</div>
-        </div>
-        <div class="detail-card">
-            <div class="detail-label">Cost per Pax</div>
-            <div class="detail-value">
-                @if($travel->passengers > 0)
-                    ₱{{ number_format($travel->amount / $travel->passengers, 2) }}
-                @else
-                    —
-                @endif
+            @if($travel->transport_provider)
+            <div class="detail-item">
+                <div class="detail-label">Transport Provider</div>
+                <div class="detail-value">{{ $travel->transport_provider }}</div>
+            </div>
+            @endif
+            <div class="detail-item">
+                <div class="detail-label">Travel Date</div>
+                <div class="detail-value">{{ $travel->travel_date->format('F d, Y') }}</div>
+            </div>
+            @if($travel->return_date)
+            <div class="detail-item">
+                <div class="detail-label">Return Date</div>
+                <div class="detail-value">{{ $travel->return_date->format('F d, Y') }}</div>
+            </div>
+            @endif
+            <div class="detail-item">
+                <div class="detail-label">Passengers</div>
+                <div class="detail-value">{{ $travel->passengers }} person(s)</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Total Amount</div>
+                <div class="detail-value" style="color:#2b6cb0;font-size:1.25rem">
+                    {{ $travel->formatted_amount }}
+                </div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Itinerary File</div>
+                <div class="detail-value">
+                    @if($travel->itinerary_path)
+                        @php
+                            $fileUrl  = Storage::url($travel->itinerary_path);
+                            $fileName = basename($travel->itinerary_path);
+                            $ext      = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                        @endphp
+                        <span class="no-print">
+                            <a href="{{ $fileUrl }}" download="{{ $fileName }}" class="btn btn-outline btn-sm">
+                                Download
+                            </a>
+                        </span>
+                        <div style="font-size:.78rem;color:#a0aec0;margin-top:.35rem">{{ $fileName }}</div>
+                    @else
+                        <span style="color:#a0aec0">No file uploaded</span>
+                    @endif
+                </div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Created</div>
+                <div class="detail-value" style="font-size:.9rem;font-weight:400;color:#718096">
+                    {{ $travel->created_at->format('M d, Y H:i') }}
+                </div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Created By</div>
+                <div class="detail-value" style="font-size:.9rem">
+                    {{ auth()->user()->name }}
+                </div>
             </div>
         </div>
-    </div>
 
-    @if($travel->notes)
-    <div style="margin-top:1.5rem">
-        <div class="detail-label" style="margin-bottom:.4rem">Notes</div>
-        <div style="background:#f8f9fa; border-radius:8px; padding:1rem; line-height:1.6">{{ $travel->notes }}</div>
-    </div>
-    @endif
-
-    {{-- ── Inline file preview ─────────────────────────────── --}}
-    @if($travel->itinerary_path)
-    @php
-        $fileUrl  = Storage::url($travel->itinerary_path);
-        $ext      = strtolower(pathinfo($travel->itinerary_path, PATHINFO_EXTENSION));
-        $isPdf    = $ext === 'pdf';
-        $isImage  = in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-    @endphp
-    <div class="file-preview">
-        <div class="detail-label" style="margin-bottom:.8rem">Itinerary</div>
-        @if($isPdf)
-            <iframe src="{{ $fileUrl }}" title="Itinerary PDF"></iframe>
-        @elseif($isImage)
-            <img src="{{ $fileUrl }}" alt="Itinerary">
-        @else
-            <a href="{{ $fileUrl }}" download class="btn btn-outline">⬇ Download Itinerary</a>
+        {{-- NOTES --}}
+        @if($travel->notes)
+            <div style="margin-top:1.5rem;padding:1rem;background:#f7fafc;border-radius:8px;border-left:3px solid #cbd5e0">
+                <div class="detail-label" style="margin-bottom:.5rem">Notes</div>
+                <p style="color:#4a5568;line-height:1.6">{{ $travel->notes }}</p>
+            </div>
         @endif
-    </div>
-    @endif
 
+        {{-- INLINE FILE VIEWER (screen only) --}}
+        @if($travel->itinerary_path)
+            @php
+                $fileUrl  = Storage::url($travel->itinerary_path);
+                $fileName = basename($travel->itinerary_path);
+                $ext      = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
+                $isImage  = in_array($ext, ['jpg','jpeg','png','gif','webp']);
+                $isPdf    = $ext === 'pdf';
+            @endphp
+
+            @if($isImage || $isPdf)
+                <div style="margin-top:1.5rem" class="itinerary-preview no-print">
+                    <div class="detail-label" style="margin-bottom:.75rem">Itinerary Preview</div>
+                    <div style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+                        @if($isPdf)
+                            <iframe src="{{ $fileUrl }}"
+                                    style="width:100%;height:700px;border:none;display:block;"
+                                    title="Itinerary PDF">
+                                <p style="padding:1rem">
+                                    <a href="{{ $fileUrl }}" target="_blank">Open PDF in new tab</a>
+                                </p>
+                            </iframe>
+                        @elseif($isImage)
+                            <div style="text-align:center;padding:1rem;background:#1a202c;">
+                                <img src="{{ $fileUrl }}"
+                                     alt="Itinerary"
+                                     style="max-width:100%;max-height:700px;object-fit:contain;border-radius:6px;">
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+        @endif
+
+    </div>
 </div>
 
-<script>
-function generateShareLink(travelId) {
-    // Try meta tag first, then fall back to XSRF-TOKEN cookie
-    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-    let csrfToken = csrfMeta ? csrfMeta.getAttribute('content') : null;
-
-    if (!csrfToken) {
-        const match = document.cookie.split(';')
-            .map(c => c.trim())
-            .find(c => c.startsWith('XSRF-TOKEN='));
-        csrfToken = match ? decodeURIComponent(match.split('=')[1]) : '';
-    }
-
-    console.log('CSRF token:', csrfToken); // remove after fix confirmed
-
-    fetch('/travels/' + travelId + '/share/generate', {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': csrfToken,
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-        },
-        credentials: 'same-origin',
-    })
-    .then(r => {
-        if (!r.ok) return r.text().then(t => { throw new Error(t); });
-        return r.json();
-    })
-    .then(data => {
-        document.getElementById('new-share-url').value = data.url;
-        document.getElementById('new-share-expires').textContent = '⏱ Expires: ' + data.expires_at;
-        document.getElementById('new-share-box').style.display = 'block';
-    })
-    .catch(err => {
-        console.error('Share error:', err);
-        alert('Failed to generate link: ' + err.message);
-    });
-}
-
-function copyShareUrl() {
-    const el = document.getElementById('share-url-input');
-    el.select(); document.execCommand('copy');
-    alert('Link copied!');
-}
-
-function copyNewUrl() {
-    const el = document.getElementById('new-share-url');
-    el.select(); document.execCommand('copy');
-    alert('Link copied!');
-}
-</script>
 @endsection
