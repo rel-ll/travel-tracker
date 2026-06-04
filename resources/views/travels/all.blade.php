@@ -48,6 +48,7 @@
                     <th>#</th>
                     <th>Mode</th>
                     <th>Route</th>
+                    <th>Transport Provider</th>
                     <th>Purpose / Project</th>
                     <th>Date</th>
                     <th>Pax</th>
@@ -69,6 +70,9 @@
                         <strong>{{ $travel->origin }}</strong>
                         <span style="color:#a0aec0;padding:0 .4rem">→</span>
                         <strong>{{ $travel->destination }}</strong>
+                    </td>
+                    <td>
+                        <strong>{{ $travel->transport_provider }}</strong>
                     </td>
                     <td>{{ $travel->purpose }}</td>
                     <td style="white-space:nowrap">
